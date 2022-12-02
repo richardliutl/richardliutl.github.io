@@ -102,7 +102,7 @@ const emoji_map = {
     const delta = [rB-rA, cB-cA];
     const ipA = document.querySelector(`[data-row="${rA}"][data-col="${cA}"]`);
     const emoji = document.createElement("constraint");
-    emoji.setHTML(`<p>${emoji_map[sum]}</p>`);
+    emoji.innerHTML = (`<p>${emoji_map[sum]}</p>`);
     if (delta[0] == 1 && delta[1] == 0) {
       if (rA == 2 || rA == 5) {
         emoji.classList.add("downdown");
