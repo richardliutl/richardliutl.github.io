@@ -2,13 +2,28 @@ const currentContentMap = {
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
-"#foo": `
-Hello world
+"#index": `
+# Richard Liu
+
+## sudoku
+`,
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // //
+"#footer": `
+***
+[Back to home](${window.location.pathname}#index)
 `,
 };
 
-const contentMap = {...currentContentMap, ...baseContentMap};
+const contentMap = {...currentContentMap};
 
+const foo = fetch('./sudoku/index.md')
+  .then(response => response.text())
+  .then(text => {
+    contentMap['#sudoku'] = text;
+  });
+  
 function initContentHashmap(escapedTextMap) {
   if (!marked) {
     return;
@@ -24,7 +39,7 @@ function initContentHashmap(escapedTextMap) {
       const escapedText = escapedTextFn(ix); // De-duplicate hashes
 
       const anchor = `
-              <a name="${escapedText}" class="anchor" href="#${escapedText}"><span class="header-link">↪︎</span></a>`;
+              <a name="${escapedText}" class="anchor" href="${window.location.pathname}#${escapedText}"><span class="header-link">↪︎</span></a>`;
       hashMap[`#${escapedText}`] = hash;
       
       if (!(hash in escapedTextMap)) escapedTextMap[hash] = {};
@@ -41,10 +56,12 @@ function initContentHashmap(escapedTextMap) {
 const escapedTextMap = {};
 const hashMap = initContentHashmap(escapedTextMap); // maps hashes to corresponding top-level hash
 
-function loadContent(event, hash) {
+async function loadContent(event, hash) {
   if (!marked) {
     return;
   }
+  await foo;
+  
   // Override function
   const renderer = {
     heading(text, level) {
@@ -53,7 +70,7 @@ function loadContent(event, hash) {
       const escapedText = (escapedTextMap[hashkey] && escapedTextMap[hashkey][text]) ||
         escapedTextBase; // default
       const anchor = `
-              <a name="${escapedText}" class="anchor" href="#${escapedText}"><span class="header-link">↪︎</span></a>`;
+              <a name="${escapedText}" class="anchor" href="${window.location.pathname}#${escapedText}"><span class="header-link">↪︎</span></a>`;
       return `
               <h${level}>
                 ${level > 1 ? anchor : ""}
@@ -92,4 +109,5 @@ function loadContent(event, hash) {
     hljs.highlightAll();
   }
 }
+
 loadContent(null, (window.location.hash && hashMap[window.location.hash]) || Object.keys(contentMap)[0]); // Defaults to week 11
