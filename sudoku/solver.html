@@ -1,0 +1,475 @@
+<style>
+  sudoku {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    width: fit-content;
+  }
+  box {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border: var(--box-border-size) solid rgb(0,0,0);
+    margin: 0px calc(-1*var(--box-border-size)) calc(-1*var(--box-border-size)) 0px;
+    --box-border-size: 6px;
+  }
+  square {
+    width: 50px;
+    height: 50px;
+  }
+  input.foo {
+    width: 100%;
+    height: 100%;
+    padding: 0px;
+    box-sizing: border-box;
+    text-align: center; 
+    font-size: x-large;
+  }
+  constraint {
+    position: relative;
+    pointer-events: none;
+  }
+  constraint.down {
+    top: -28px;
+    left: 14px;
+  }
+  constraint.downdown {
+    top: -25px;
+    left: 14px;
+  }
+  constraint.right {
+    top: -52px;
+    left: 39px;
+  }
+</style>
+<button id="checker" onclick="main()">Check</button>
+<sudoku>
+</sudoku>
+<script>
+{
+// SCOPING FOO
+let foo = [];
+
+const puzzle = [
+  // row, col, value
+  [0, 0, 6],
+  [0, 8, 8],
+  [1, 1, 9],
+  [1, 2, 2],
+  [1, 7, 3],
+  [4, 4, 1],
+  [6, 7, 1],
+  [7, 1, 4],
+  [7, 7, 2],
+  [8, 0, 1],
+  [8, 8, 5],
+];
+const constraints_source = [
+  // sqA, sqB, sum
+  [[1,4], [2,4], 10],
+  [[5,0], [6,0], 10],
+  [[5,4], [6,4], 10],
+  [[5,8], [6,8], 10],
+  [[7,4], [8,4], 10],
+  
+  [[6,3], [6,4], 5],
+  [[6,4], [6,5], 10],
+];
+const emoji_map = {
+  5: "5️⃣",
+  10: "🔟",
+}
+
+{
+  let sudokuHtml = ``;
+  for (let i=0; i<9; i++) {
+    let tbt = ``;
+  for (let j=0; j<9; j++) {
+    tbt += `
+<square>
+  <input class="foo" data-box="${i}" data-box-ix="${j}"></input>
+</square>
+`;
+    }
+    sudokuHtml += `<box>${tbt}</box>`;
+  }
+    
+  document.querySelector("sudoku").innerHTML = sudokuHtml;
+  
+  // Show sum constraints
+  main();
+  for (const [sqA, sqB, sum] of constraints_source) {
+    const [rA, cA] = sqA;
+    const [rB, cB] = sqB;
+    const delta = [rB-rA, cB-cA];
+    const ipA = document.querySelector(`[data-row="${rA}"][data-col="${cA}"]`);
+    const emoji = document.createElement("constraint");
+    emoji.setHTML(`<p>${emoji_map[sum]}</p>`);
+    if (delta[0] == 1 && delta[1] == 0) {
+      if (rA == 2 || rA == 5) {
+        emoji.classList.add("downdown");
+      } else {
+        emoji.classList.add("down");
+      }
+    }
+    if (delta[0] == 0 && delta[1] == 1) {
+      emoji.classList.add("right");
+    }
+    ipA.parentElement.appendChild(emoji);
+    console.log(sqA, delta, emoji);
+  }
+  
+  // Show puzzle
+  for (const [r, c, val] of puzzle) {
+    const ip = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+    ip.value = val;
+  }
+}
+
+function main(reset = false)
+{
+  let progress = true;
+  
+  let data = getData();
+  let max_iter = 9;
+  while (progress) {
+    const [prog_iter, opts] = solve(data);
+    data = opts;
+    max_iter--;
+    if (max_iter <= 0) break;
+    progress = prog_iter;
+  }
+  console.log(data);
+  console.log(data.map(x => x.map(x => x.length)));
+  console.log(`${max_iter} iters remain`);
+  
+  color(data, reset);
+  
+  // RESOLVE CONTRADICTIONS
+  if (foo.length > 0) {
+    alert(foo.join("\n"));
+    foo = [];
+  }
+}
+
+function contradiction(...args) {
+  <!-- alert(args.join(",")); -->
+  foo.push(args.join(","));
+}
+
+<!-- function _updateRowRule(){return( -->
+function updateRowRule(opts, data) {
+  let progress = false;
+  for (let r=0; r<data.length; r++) {
+    // reduce
+    for (let c=0; c<data[r].length; c++) {
+      const has = [];
+      for (let cc=0; cc<data[r].length; cc++) {
+        if (cc != c && data[r][cc].length == 1) {
+          has.push(data[r][cc][0]);
+        }
+      }
+      let solved = false;
+      const old_pool = data[r][c];
+      if (old_pool.length == 1) {
+        opts[r][c] = data[r][c]; // propagate solved squares
+        // continue;
+        solved = true;
+      }
+      const new_pool = old_pool.filter((x) => (!(has.includes(x))));
+      if (new_pool.length != old_pool.length) {
+        progress = true;
+      }
+      if (solved) {
+        if (!new_pool.includes(data[r][c][0])) {
+          contradiction("=== CONTRADICTION ===", has, data[r][c])
+        }
+        continue;
+      }
+      opts[r][c] = new_pool;
+    }
+  }
+  return progress;
+}
+<!-- )} -->
+
+<!-- function _updateColRule(){return( -->
+function updateColRule(opts, data) {
+  let progress = false;
+  for (let c=0; c<data[0].length; c++) {
+    // reduce
+    for (let r=0; r<data.length; r++) {
+      const has = [];
+      for (let rr=0; rr<data.length; rr++) {
+        if (rr != r && data[rr][c].length == 1) {
+          has.push(data[rr][c][0]);
+        }
+      }
+      let solved = false;
+      const old_pool = data[r][c];
+      if (old_pool.length == 1) {
+        solved = true;
+        opts[r][c] = data[r][c]; // propagate solved squares
+        // continue;
+      }
+      const new_pool = old_pool.filter((x) => (!(has.includes(x))));
+      if (new_pool.length != old_pool.length) {
+        progress = true;
+      }
+      if (solved) {
+        if (!new_pool.includes(data[r][c][0])) {
+          contradiction("=== CONTRADICTION ===")
+        }
+        continue;
+      }
+      opts[r][c] = new_pool;
+    }
+  }
+  return progress;
+}
+<!-- )} -->
+
+<!-- function _genEmptyOpts(){return( -->
+function genEmptyOpts() {
+    const opts = new Array(9);
+    for (var i = 0; i < opts.length; i++) {
+      opts[i] = new Array(9);
+    }
+    return opts;
+  }
+<!-- )} -->
+
+<!-- function _boxToLoc(){return( -->
+function boxToLoc(box, box_ix) {
+    const sudloc = [Math.floor(box / 3), box % 3];
+    const boxloc = [Math.floor(box_ix / 3), box_ix % 3];
+    const r = 3*sudloc[0] + boxloc[0];
+    const c = 3*sudloc[1] + boxloc[1];
+    return [r, c];
+  }
+<!-- )} -->
+
+<!-- function _updateBoxRule(boxToLoc){return( -->
+function updateBoxRule(opts, data) {
+  let progress = false;
+  for (let box=0; box<data.length; box++) {
+    // reduce
+    for (let ix=0; ix<data.length; ix++) {
+      const has = [];
+      for (let ixx=0; ixx<data.length; ixx++) {
+        const [r,c] = boxToLoc(box, ixx);
+        if (ixx != ix && data[r][c].length == 1) {
+          has.push(data[r][c][0]);
+        }
+      }
+        
+      let solved = false;
+      const [r,c] = boxToLoc(box, ix);
+      const old_pool = data[r][c];
+      if (old_pool.length == 1) {
+        solved = true;
+        opts[r][c] = data[r][c]; // propagate solved squares
+        // continue;
+      }
+      const new_pool = old_pool.filter((x) => (!(has.includes(x))));
+      if (new_pool.length != old_pool.length) {
+        progress = true;
+      }
+      if (solved) {
+        if (!new_pool.includes(data[r][c][0])) {
+          contradiction("=== CONTRADICTION ===")
+        }
+        continue;
+      }
+      opts[r][c] = new_pool;
+    }
+  }
+  return progress;
+}
+<!-- )} -->
+
+<!-- function _updateSumRule(genEmptyOpts){return( -->
+function updateSumRule(opts, data) {
+  let progress = false;
+  const constraints = genEmptyOpts();
+  for (const [sqA, sqB, sum] of constraints_source) {
+    if (!constraints[sqA[0]][sqA[1]]) {
+      constraints[sqA[0]][sqA[1]] = [];
+    }
+    if (!constraints[sqB[0]][sqB[1]]) {
+      constraints[sqB[0]][sqB[1]] = [];
+    }
+    constraints[sqA[0]][sqA[1]].push([sqB, sum]);
+    constraints[sqB[0]][sqB[1]].push([sqA, sum]);
+  }
+  
+  for (let r=0; r<data.length; r++) {
+    for (let c=0; c<data[r].length; c++) {
+      let solved = false;
+      if (data[r][c].length == 1 || !constraints[r][c]) {
+        opts[r][c] = data[r][c]; // propagate solved squares
+        solved = true;
+        if (!constraints[r][c]) {
+          continue;
+        }
+      }
+      // reduce
+      let old_pool = data[r][c];
+      let new_pool = old_pool.filter(() => true);
+      for (const [loc, sum] of constraints[r][c]) {
+        new_pool = new_pool.filter((x) => data[loc[0]][loc[1]].includes(sum - x));
+      }
+      if (new_pool.length != old_pool.length) {
+        progress = true;
+        // console.log([r,c], constraints[r][c], old_pool, new_pool)
+      }
+      if (solved) {
+        if (!new_pool.includes(data[r][c][0])) {
+          contradiction("=== CONTRADICTION ===")
+        }
+        continue;
+      }
+      opts[r][c] = new_pool;
+    }
+  }
+  return progress;
+}
+<!-- )} -->
+
+<!-- function _updateKnightRule(){return( -->
+function updateKnightRule(opts, data) {
+  let progress = false;
+  const moves = [
+    [1, 2],
+    [2, 1],
+    [-1, 2],
+    [-2, 1],
+    [1, -2],
+    [2, -1],
+    [-1, -2],
+    [-2, -1],
+  ];
+  
+  for (let r=0; r<data.length; r++) {
+    for (let c=0; c<data[r].length; c++) {
+      let solved = false;
+      if (data[r][c].length == 1) {
+        opts[r][c] = data[r][c]; // propagate solved squares
+
+        solved = true;
+        // continue;
+      }
+      // reduce
+      const old_pool = data[r][c];
+      const has = [];
+      for (const move of moves) {
+        const loc = [r+move[0], c+move[1]];
+        if (loc[0] < 0 || loc[0] >= data.length || loc[1] < 0 || loc[1] >= data[0].length) {
+          continue; // out of bounds
+        }
+        const square = data[loc[0]][loc[1]];
+        if (square.length == 1) {
+          has.push(square[0])
+        }
+      }
+      const new_pool = old_pool.filter((x) => !(has.includes(x)));
+      if (new_pool.length != old_pool.length) {
+        progress = true;
+      }
+      if (solved) {
+        if (!new_pool.includes(data[r][c][0])) {
+          contradiction("=== CONTRADICTION ===")
+        }
+        continue;
+      }
+      opts[r][c] = new_pool;
+    }
+  }
+  return progress;
+}
+<!-- )} -->
+
+<!-- function _color(){return( -->
+function color(opts, reset=false) {
+    for (let r=0; r<opts.length; r++) {
+      for (let c=0; c<opts[r].length; c++) {
+        const ip = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+        ip.style['backgroundColor'] = '';
+        if (reset) {
+          continue;
+        }
+        if (opts[r][c].length == 0) {
+          ip.style['backgroundColor'] = 'red';
+        }
+        if (opts[r][c].length == 1) {
+          ip.style['backgroundColor'] = 'lawngreen';
+        }
+        if (opts[r][c].length == 2) {
+          ip.style['backgroundColor'] = 'yellow';
+        }
+        if (opts[r][c].length == 3) {
+          ip.style['backgroundColor'] = 'orange';
+        }
+      }
+    }
+  }
+<!-- )} -->
+
+<!-- function _getData(genEmptyOpts,boxToLoc){return( -->
+function getData() {
+    const data = genEmptyOpts();
+    
+    for (const ip of document.querySelectorAll("input")) {
+      const dataset = ip.dataset;
+      const box = parseInt(dataset['box']);
+      const box_ix = parseInt(dataset['boxIx']);
+
+      const [r,c] = boxToLoc(box, box_ix);
+
+      ip.dataset['row'] = r;
+      ip.dataset['col'] = c;
+      if (ip.value) {
+        data[r][c] = [parseInt(ip.value)];
+      }
+    }
+    // Initialize options
+    for (let r=0; r<data.length; r++) {
+      for (let c=0; c<data[r].length; c++) {
+        if (data[r][c]) {
+          continue;
+        }
+        data[r][c] = [];
+        for (let k=1; k<=data[r].length; k++) {
+          data[r][c].push(k);
+        }
+      }
+    }
+    return data;
+  }
+<!-- )} -->
+
+<!-- function _solve(genEmptyOpts,updateRowRule,updateColRule,updateBoxRule,updateSumRule,updateKnightRule){return( -->
+function solve(data) {
+    let progress = false;
+    
+    const opts = [data];
+    for (let i=0; i<9; i++) {
+      opts.push(genEmptyOpts());
+    }
+    const rules = [
+      updateRowRule,
+      updateColRule,
+      updateBoxRule,
+      updateSumRule,
+      updateKnightRule,
+    ];
+    for (let i=0; i<rules.length; i++) {
+      const prog_rule = rules[i](opts[i+1], opts[i]);
+      progress = progress || prog_rule;
+    }
+    
+    // 
+    return [progress, opts[rules.length]];
+  }
+<!-- )} -->
+
+} // SCOPING FOO
+</script>
