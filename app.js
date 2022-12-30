@@ -5,6 +5,7 @@ const currentContentMap = {
 "#index": `
 # Richard Liu
 
+## Y2023 Puzzle
 ## sudoku
 `,
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
@@ -18,12 +19,19 @@ const currentContentMap = {
 
 const contentMap = {...currentContentMap};
 
-const foo = fetch('./sudoku/index.md')
-  .then(response => response.text())
-  .then(text => {
-    contentMap['#sudoku'] = text;
-  });
-  
+const foo = Promise.all([
+  fetch('./sudoku/index.md')
+    .then(response => response.text())
+    .then(text => {
+      contentMap['#sudoku'] = text;
+    }),
+  fetch('./y2023/index.md')
+    .then(response => response.text())
+    .then(text => {
+      contentMap['#y2023-puzzle'] = text;
+    })
+]);
+
 function initContentHashmap(escapedTextMap) {
   if (!marked) {
     return;
