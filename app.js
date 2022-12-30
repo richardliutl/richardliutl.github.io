@@ -25,7 +25,7 @@ const foo = Promise.all([
     .then(text => {
       contentMap['#sudoku'] = text;
     }),
-  fetch('./y2023/index.md')
+  fetch('./Y2023/index.md')
     .then(response => response.text())
     .then(text => {
       contentMap['#y2023-puzzle'] = text;
@@ -118,4 +118,5 @@ async function loadContent(event, hash) {
   }
 }
 
-loadContent(null, (window.location.hash && hashMap[window.location.hash]) || Object.keys(contentMap)[0]); // Defaults to week 11
+// Defaults to home
+loadContent(null, (window.location.hash && hashMap[window.location.hash]) || Object.keys(contentMap)[0]);
