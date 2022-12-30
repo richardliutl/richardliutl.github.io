@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<style>
+  ol {
+    column-count: 4;
+    column-gap: 20px;
+  }
+  @media only screen and (max-width: 768px) {
+    /* For mobile phones: */
+    ol {
+      column-count: 1;
+    }
+  }
+  
+  .MathJax {
+    font-size: 1.3em !important;
+  }
+  
+  no-solution {
+    color: red;
+    opacity: 0.3;
+  }
+  cool {
+    background-color: yellow;
+  }
+  header {
+    display: inline-flex;
+    align-items: center;
+  }
+  alert {
+    font-size: 11px;
+    opacity: 0.7;
+  }
+  
+  <!-- https://loading.io/css/ -->
+  loading {
+    display: inline-flex;
+    align-items: center;
+    width: 30px;
+    height: 30px;
+  }
+  loading:before {
+    transform: scale(0.3);
+    
+    content: " ";
+    display: inline-flex;
+    align-items: center;
+    width: 20px;
+    height: 20px;
+    margin: 8px;
+    border-radius: 50%;
+    border: 4px solid #aaa;
+    border-color: #aaa transparent #aaa transparent;
+    animation: loading 1.2s linear infinite;
+  }
+  @keyframes loading {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+
+</style>
+<puzzle>
+  <header>
+    Current year:  <input value="2023" style="width:4em; text-align:center"/>  <loading></loading><progress max="100" value="0"></progress>    <alert></alert>
+  </header>
+  <ol>
+    <li>
+      foo
+    </li>
+  </ol>
+</puzzle>
+<!-- <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script> -->
+<!-- <script id="MathJax-script" async -->
+        <!-- src="./tex-mml-chtml.js"> -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.css" integrity="sha384-ko6T2DjISesD0S+wOIeHKMyKsHvWpdQ1s/aiaQMbL+TIXx3jg6uyf9hlv3WWfwYv" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.js" integrity="sha384-tsPOhveNsi36uhglzMBNOAA2xd7LlEqQuQHFKi4DwP+6UKrrLGub1MD77Zx18F8e" crossorigin="anonymous"></script>
+</script>
+<script>
+function showLoading(visible=true) {
+  const puzzle = document.querySelector("puzzle");
+  const loading = puzzle.querySelector("loading");
+  const progress = puzzle.querySelector("progress");
+  loading.style.display = visible ? "" : "none";
+  progress.style.display = visible ? "" : "none";
+}
+function setLoad(amount) {
+  const puzzle = document.querySelector("puzzle");
+  const progress = puzzle.querySelector("progress");
+  progress.value = 100*amount;
+}
+function setAlert(text) {
+  const puzzle = document.querySelector("puzzle");
+  const alertDiv = puzzle.querySelector("alert");
+  alertDiv.textContent = text;
+}
+setLoad(0);
+
+// MAIN
+async function run() {
+  const puzzle = document.querySelector("puzzle");
+  const input = puzzle.querySelector("input");
+  input.onchange = (e) => {
+    handle(e.target.value);
+  }
+  handle("2023");
+}
+run();
+// end MAIN
+
+window.puzzleWorker = false;
+function handle(year) {
+  // INIT
+  setAlert("");
+  setLoad(0);
+  showLoading(true);
+  // Create a new worker, giving it the code in "generate.js"
+  let worker = window.puzzleWorker;
+  worker && worker.terminate();
+  worker = new Worker('./solve.js');
+  window.puzzleWorker = worker;
+
+  worker.postMessage({
+    command: 'solve',
+    year,
+  });
+  
+  worker.addEventListener('message', (message) => {
+    if (message.data.command === 'end') {
+      display(message.data.data);
+    }
+    if (message.data.command === 'setLoad') {
+      setLoad(message.data.progress);
+    }
+    if (message.data.command === 'alert') {
+      setAlert(message.data.text);
+    }
+  });
+}
+function display(map) {
+  const puzzle = document.querySelector("puzzle");
+  const list = document.querySelector("ol");
+  
+  const items = [];
+  for (let i=1; i<=100; i++) {
+    let html = "<no-solution>none</no-solution>";
+//    if (map[i]) html = `\\(???\\)`;
+    if (map[i]) {
+      html = `<latex data-i=${i}></latex>`;
+//      html = `${map[i].text}`;
+      if (map[i].score >= 7.5) html = `<cool>${html}</cool>`;
+    }
+    items.push(`<li><expression value="${map[i] && map[i].text}"/>${html}</li>`);
+  }
+  list.innerHTML = items.join("\n");
+  // now render latex
+  for (let i=1; i<=100; i++) {
+    if (map[i]) {
+      katex.render(map[i].latex, list.querySelector(`latex[data-i="${i}"]`), {
+        throwOnError: false
+      });
+    }
+  }
+  
+  showLoading(false);
+}
+</script>
