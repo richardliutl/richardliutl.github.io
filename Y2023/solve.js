@@ -1,6 +1,6 @@
 
 global_year = "2023";
-global_computation_limit = 75000;
+global_computation_limit = 150000;
 // Listen for messages from the main thread.
 addEventListener("message", (message) => {
   if (message.data.command === 'solve') {
@@ -121,9 +121,9 @@ class Node {
   }
 }
 function main(digits) {
-  loaded(0.1);
+  loaded(0.05);
   const nums = digitize(digits);
-  loaded(0.5);
+  loaded(0.1);
   const data = treefy(nums).map(node => {return {
     text: node.toText(true),
     latex: node.toLatex(true),
@@ -135,22 +135,43 @@ function main(digits) {
     data,
   });
 }
+function computationBound(numDigits) {
+  if (numDigits == 1) return 5;
+  return 5 * numDigits * computationBound(numDigits - 1);
+}
+function computationEstimate(nums, numsIx, computationIx = 0) {
+  const INITIAL_PART = 0.1;
+  let total = 0;
+  let partial = 0;
+  for (let i=0; i<nums.length; i++) {
+    total += computationBound(nums[i].length);
+    if (i < numsIx) {
+      partial += computationBound(nums[i].length);
+    }
+  }
+  partial += computationIx;
+  loaded(INITIAL_PART + (1-INITIAL_PART)*partial/total);
+}
 function treefy(nums) {
-  let c = 0;
+  let c = 0; // total ticks
+  let numsIx = 0;
   let data = [];
   for (let digits of nums) {
-    c++;
     digits = digits.map(d => new Node(d, 0));
-    let computation = 0;
+    let computation = 0; // estimated per loop
     recurse(
       digits,
       (s1, s2) => {        
         const nodes = [];
         
+        c++;
         computation++;
         if (computation > global_computation_limit) {
-          makeAlert("Computation limit exceeded, continuing anyways...");
+          makeAlert(`Computation limit exceeded, continuing anyways...`);
           return nodes;
+        }
+        if (c % 100 == 0) {
+          computationEstimate(nums, numsIx, computation);
         }
         
         for (const op of ["+", "-", "*", "/", "**"]) {
@@ -184,7 +205,8 @@ function treefy(nums) {
       false
     );
     
-    loaded(0.5*(1 + c/nums.length));
+    computationEstimate(nums, numsIx);
+    numsIx++;
   }
   return data;
 }
