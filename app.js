@@ -5,6 +5,8 @@ const currentContentMap = {
 "#index": `
 # Richard Liu
 
+## Recreating the Past (MAS.S62)
+## Unofficially: MIT Confessions Compiled
 ## Y2023 Puzzle
 ## sudoku
 `,
@@ -18,25 +20,28 @@ const currentContentMap = {
 };
 
 const contentMap = {...currentContentMap};
+const directoryListing = [
+  ['#recreating-the-past-mas-s62-', './rtp/index.md'],
+  ['#unofficially-mit-confessions-compiled', './unobcc/index.md'],
+  ['#y2023-puzzle', './Y2023/index.md'],
+  ['#sudoku', './sudoku/index.md'],
+];
+const listingContentMap = Promise.all(
+  directoryListing.map(([hash, file]) => 
+    fetch(file)
+      .then(response => response.text())
+      .then(text => {
+        contentMap[hash] = text;
+      })
+  )
+);
 
-const foo = Promise.all([
-  fetch('./sudoku/index.md')
-    .then(response => response.text())
-    .then(text => {
-      contentMap['#sudoku'] = text;
-    }),
-  fetch('./Y2023/index.md')
-    .then(response => response.text())
-    .then(text => {
-      contentMap['#y2023-puzzle'] = text;
-    })
-]);
-
-function initContentHashmap(escapedTextMap) {
+async function initContentHashmap(escapedTextMap) {
   if (!marked) {
     return;
   }
   let hashMap = {};
+  await listingContentMap;
   // Override function
   const renderer = (hash) => {return {
     heading(text, level) {
@@ -62,14 +67,16 @@ function initContentHashmap(escapedTextMap) {
   return hashMap;
 }
 const escapedTextMap = {};
-const hashMap = initContentHashmap(escapedTextMap); // maps hashes to corresponding top-level hash
+let hashMap = {}; // maps hashes to corresponding top-level hash
 
-async function loadContent(event, hash) {
+async function loadContent(event, hash, init=false) {
   if (!marked) {
     return;
   }
-  await foo;
   
+  if (init) {
+    hashMap = await initContentHashmap(escapedTextMap); // maps hashes to corresponding top-level hash
+  }
   // Override function
   const renderer = {
     heading(text, level) {
@@ -110,7 +117,7 @@ async function loadContent(event, hash) {
     
     // Add spotlights
     for (const code of document.querySelectorAll('#content pre code')) {
-      code.addEventListener('click', spotlightCode);
+    //  code.addEventListener('click', spotlightCode);
     }
     
     // Style code blocks
@@ -119,4 +126,8 @@ async function loadContent(event, hash) {
 }
 
 // Defaults to home
-loadContent(null, (window.location.hash && hashMap[window.location.hash]) || Object.keys(contentMap)[0]);
+loadContent(
+  null,
+  (window.location.hash && hashMap[window.location.hash]) || Object.keys(contentMap)[0],
+  true
+);
