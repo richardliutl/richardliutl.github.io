@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<style>
+  digits {
+    display: flex;
+  }
+  
+  digit {
+    display: flex;
+    flex-direction: column;
+    width: 25px;
+  }
+  
+  button {
+    height: 21px;
+  }
+  spacer {
+    height: 21px;
+  }
+</style>
+<script src="../p5.min.js"></script>
+<script>
+const width = 1000;
+
+const sketch1 = new p5(sketch => {
+  const height = 350;
+  const numBumps = 14;
+  let rectWidth = 25;
+  let bumpD = 25;
+  let bumps;
+  let alph = 0;
+  let oldF = 0;
+  let isMouseHover = false;
+  sketch.setup = function() {
+    const renderer = sketch.createCanvas(width, height);
+    sketch.noStroke();
+    sketch.background(230);
+    resetBumps();
+    
+    renderer.elt.addEventListener("mouseleave", function (event) {
+      isMouseHover = false
+    }, false);
+    renderer.elt.addEventListener("mouseover", function (event) {
+      isMouseHover = true
+    }, false);
+  };
+  function resetBumps() {
+    bumps = [];
+    for (let i=0; i<numBumps; i++) {
+      let x = 0;
+      let reset = true;
+      while (reset) {
+        x = sketch.map(Math.random(), 0, 1, 0.2, 0.8);
+        reset = (i > 2 && ((x > bumps[i-1] && bumps[i-1] > bumps[i-2] && bumps[i-2] > bumps[i-3])
+                      || (x < bumps[i-1] && bumps[i-1] < bumps[i-2] && bumps[i-2] < bumps[i-3])));
+        reset = reset || (i > 0 && Math.abs(x - bumps[i-1]) < 0.1);
+      }
+      bumps.push({
+        x,
+        y: 0.5,
+        alph: 0
+      });
+    }
+  }
+  function getX(ix) {
+    return sketch.map(ix, 0, numBumps, 0, width - rectWidth);
+  }
+  function doBump(ix) {
+      sketch.fill('#385da0');
+      if (ix % 2 == 1) {
+        sketch.fill('#000');
+      }
+      let x = getX(ix);
+      let y = bumps[ix].y;
+      let bump = (y + bumps[ix].alph*(bumps[ix].x - y))*height;
+      sketch.rect(x, 0, rectWidth, bump-bumpD);
+      sketch.rect(x, bump+bumpD, rectWidth, height-(bump+bumpD));
+      sketch.arc(x, bump, bumpD*2+2*rectWidth, bumpD*2+2*rectWidth, -sketch.HALF_PI, sketch.HALF_PI);
+      
+      sketch.fill('#e6e6e6');
+      sketch.arc(x, bump, bumpD*2, bumpD*2, -sketch.HALF_PI-0.05, sketch.HALF_PI+0.05, sketch.OPEN);
+  }
+    
+  sketch.draw = function() {
+    let mouseRange = [oldF, sketch.mouseX];
+    if (oldF > sketch.mouseX) {
+      mouseRange = [sketch.mouseX, oldF];
+    }
+
+    for (let i=0; i<numBumps; i++) {
+      let x = getX(i);
+      if (x <= mouseRange[0] || x > mouseRange[1] || !isMouseHover) continue;
+      bumps[i] = {
+        x: sketch.map(Math.random(), 0, 1, 0.2, 0.8),
+        y: sketch.constrain(sketch.mouseY / height, 0, 1, 0.2, 0.8),
+        alph: 0
+      };
+    }
+    oldF = sketch.mouseX;
+    
+    sketch.background("#e6e6e6");
+    for (let i=0; i<numBumps; i++) {
+      let alph = bumps[i].alph;
+      let scale = sketch.map(Math.log(alph+0.01), -1, 0, 0.02, 0);
+      bumps[i].alph += scale;
+      doBump(i);
+    }
+  }
+})
+
+const sketch2 = new p5(sketch => {
+  const height = 350;
+  const numBumps = 14;
+  let rectWidth = 25;
+  let bumpD = 25;
+  let bumps;
+  let alph = 0;
+  let oldF = 0;
+  let isMouseHover = false
+  sketch.setup = function() {
+    let renderer = sketch.createCanvas(width, height);
+    sketch.noStroke();
+    sketch.background(230);
+    resetBumps();
+    
+    renderer.elt.addEventListener("mouseleave", function (event) {
+      isMouseHover = false
+    }, false);
+    renderer.elt.addEventListener("mouseover", function (event) {
+      isMouseHover = true
+    }, false);
+  };
+  function resetBumps() {
+    bumps = [];
+    for (let i=0; i<numBumps; i++) {
+      let x = 0;
+      let reset = true;
+      while (reset) {
+        x = sketch.map(Math.random(), 0, 1, 0.2, 0.8);
+        reset = (i > 2 && ((x > bumps[i-1] && bumps[i-1] > bumps[i-2] && bumps[i-2] > bumps[i-3])
+                      || (x < bumps[i-1] && bumps[i-1] < bumps[i-2] && bumps[i-2] < bumps[i-3])));
+        reset = reset || (i > 0 && Math.abs(x - bumps[i-1]) < 0.1);
+      }
+      bumps.push(x);
+    }
+  }
+  function doBump(ix) {
+      // It's a letter key, fill a rectangle
+      sketch.fill('#385da0');
+      if (ix % 2 == 1) {
+        sketch.fill('#000');
+      }
+      let x = sketch.map(ix, 0, numBumps, 0, width - rectWidth);
+      let bump = (0.5 + alph*(bumps[ix] - 0.5))*height;
+      sketch.rect(x, 0, rectWidth, bump-bumpD);
+      sketch.rect(x, bump+bumpD, rectWidth, height-(bump+bumpD));
+      sketch.arc(x, bump, bumpD*2+2*rectWidth, bumpD*2+2*rectWidth, -sketch.HALF_PI, sketch.HALF_PI);
+      
+      sketch.fill('#e6e6e6');
+      sketch.arc(x, bump, bumpD*2, bumpD*2, -sketch.HALF_PI-0.05, sketch.HALF_PI+0.05, sketch.OPEN);
+  }
+    
+  sketch.draw = function() {
+    // let mouseF = sketch.map(sketch.mouseX, 0, width, 0, 1);
+    // let mouseDx = sketch.map(sketch.mouseX, 0, width, 0, 1) - oldF;
+    // oldF = mouseF;
+    // mouseDx = Math.abs(mouseDx);
+
+    // let x = sketch.map(mouseDx, 0, 1, 0, 0.5);
+    let scale = sketch.map(Math.log(alph+0.01), -1, 0, 1, 0.1);
+    let x = 0;
+    if (isMouseHover) {
+      x = 0.05;
+    }
+    alph += x*scale;
+    if (alph > 1) {
+      alph = 0;
+      resetBumps();
+    }
+    
+    sketch.background("#e6e6e6");
+    for (let i=0; i<numBumps; i++) doBump(i);
+  }
+})
+</script>
