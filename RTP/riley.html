@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<style>
+  body {
+    margin: 0;
+  }
+  main {
+    overflow: hidden;
+    position: fixed;
+  }
+</style>
+<script src="../p5.min.js"></script>
+<script>
+const width = window.innerWidth;
+
+const sketch1 = new p5(sketch => {
+  const height = 470;
+  const dia = 29;
+  const mf = 0.8;
+  const low = 0.1;
+  
+  let mouseX = 0;
+  let isMouseHover = false;
+  sketch.setup = function() {
+    const renderer = sketch.createCanvas(width, height);
+    sketch.background("#f2ede9");
+    
+    renderer.elt.addEventListener("mouseleave", function (event) {
+      isMouseHover = false
+    }, false);
+    renderer.elt.addEventListener("mouseover", function (event) {
+      isMouseHover = true
+    }, false);
+
+    h();
+  };
+  sketch.draw = function() {
+    if (isMouseHover && sketch.mouseX != mouseX) { // performance optimiziation
+      mouseX = sketch.map(sketch.mouseX, 0, width, 0, 1000);
+      h();
+      console.log(window.innerWidth);
+    }
+  }
+  function h() {
+    sketch.background("#f2ede9");
+    sketch.noStroke();
+
+    for (let x=0; x<width-dia; x+=dia) {
+      const delt = (x-mouseX)/100;
+      const cd = (1-0.37**delt)/(1+0.37**delt);
+      const xx = x + 10*cd*sketch.cos(delt*mouseX*0.016); // wavey effect
+      
+      let y0=0, l=1, inc=0;
+      for (let y=0; y<2*height; y+=25) {
+        if ((x+y)%2 == 0) {
+          const tp = sketch.map(sketch.sin((xx+y)*0.008+4), -1, 1, 100, 255); // diagonal stripes
+          sketch.fill(68, 69, 71, tp);
+          sketch.ellipse(xx + dia*0.85, y0+15, dia, l*dia);
+        }
+        y0 += l*dia/2;
+        l = sketch.constrain(l*mf + inc*(1-mf), low, 1);
+        if (l == low) {
+          inc = 1; // from 1, exponentially approach low=0.1, then expnly return to 1
+        }
+        y0 += l*dia/2;
+      }
+    }
+  }
+})
+</script>
