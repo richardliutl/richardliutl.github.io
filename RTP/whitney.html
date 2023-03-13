@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<style>
+  body {
+    margin: 0;
+  }
+  main {
+    overflow: hidden;
+    position: fixed;
+  }
+</style>
+<script src="../p5.min.js"></script>
+<script>
+const width = window.innerWidth;
+
+const sketch1 = new p5(sketch => {
+  const height = 400;
+  const numBumps = 8;
+  let time = 0;
+  let mouseX = 0;
+  let isMouseHover = false;
+  sketch.setup = function() {
+    const renderer = sketch.createCanvas(width, height);
+    sketch.noFill();
+    sketch.background("#a26100");
+    sketch.rectMode(sketch.CENTER);
+    
+    renderer.elt.addEventListener("mouseleave", function (event) {
+      isMouseHover = false
+    }, false);
+    renderer.elt.addEventListener("mouseover", function (event) {
+      isMouseHover = true
+    }, false);
+  };
+  sketch.draw = function() {
+    if (isMouseHover) {
+      mouseX = sketch.mouseX;
+    }
+    const speed = sketch.map(mouseX, 0, width, 1, 100);
+    
+    sketch.background("#d37300");
+    sketch.strokeWeight(6);
+    sketch.stroke(0);
+
+    const xOrig = width/2;
+    const yOrig = height/2;
+    sketch.translate(xOrig, yOrig);
+    
+    const gA = [0, 1];
+    const gT = [0, 100];
+    const gX = [-100, 100];
+    const gM = [-1, 1];
+    for (let g=0; g<2; g++) {
+    for (let i=0; i<numBumps; i++) {
+      const radius = 100;
+      const angle = (time*gM[g] + i*0.06 + gT[g])*6
+      const x = radius * sketch.cos(angle*2) + gX[g];
+      const y = radius * sketch.sin(angle*4.1);
+      const s = sketch.map(sketch.sin(angle*1.15), -1, 1, 150, 2);
+      sketch.square(x, y, s);
+    }
+    const r = sketch.map(sketch.sin(time*4), -1, 1, -0.2, 0.2)
+    sketch.rotate(r);
+    }
+    
+    time += 0.00003*speed;
+  }
+})
+</script>
