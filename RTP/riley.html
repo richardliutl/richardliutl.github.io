@@ -53,8 +53,8 @@ const sketch1 = new p5(sketch => {
       let y0=0, l=1, inc=0;
       for (let y=0; y<2*height; y+=25) {
         if ((x+y)%2 == 0) {
-          const tp = sketch.map(sketch.sin((xx+y)*0.008+4), -1, 1, 100, 255); // diagonal stripes
-          sketch.fill(68, 69, 71, tp);
+          const tp = sketch.map(sketch.sin((xx+y)*0.008+4), -1, 1, 220, 67); // diagonal stripes
+          sketch.fill(tp);
           sketch.ellipse(xx + dia*0.85, y0+15, dia, l*dia);
         }
         y0 += l*dia/2;
