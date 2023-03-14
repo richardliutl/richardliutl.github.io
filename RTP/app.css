@@ -1,0 +1,9 @@
+body {
+  margin: 0;
+  user-select: none;
+  overflow: hidden;
+}
+main {
+  overflow: hidden;
+  position: fixed;
+}
