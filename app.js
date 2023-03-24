@@ -6,8 +6,11 @@ const currentContentMap = {
 # Richard Liu
 
 ## Recreating the Past (MAS.S62)
+## Unofficially: MIT Confessions Compiled
 ## Y2023 Puzzle
 ## sudoku
+## reading
+
 `,
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // //
@@ -24,6 +27,7 @@ const directoryListing = [
   ['#unofficially-mit-confessions-compiled', './unobcc/index.md'],
   ['#y2023-puzzle', './Y2023/index.md'],
   ['#sudoku', './sudoku/index.md'],
+  ['#reading', './reading/index.md'],
 ];
 const listingContentMap = Promise.all(
   directoryListing.map(([hash, file]) => 
