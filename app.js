@@ -5,8 +5,8 @@ const currentContentMap = {
 "#index": `
 # Richard Liu
 
+## IBM 2023 April Puzzle
 ## Recreating the Past (MAS.S62)
-## Unofficially: MIT Confessions Compiled
 ## Y2023 Puzzle
 ## sudoku
 ## reading
@@ -23,8 +23,8 @@ const currentContentMap = {
 
 const contentMap = {...currentContentMap};
 const directoryListing = [
+  ['#ibm-2023-april-puzzle', './IBM042023/index.md'],
   ['#recreating-the-past-mas-s62-', './RTP/index.md'],
-  ['#unofficially-mit-confessions-compiled', './unobcc/index.md'],
   ['#y2023-puzzle', './Y2023/index.md'],
   ['#sudoku', './sudoku/index.md'],
   ['#reading', './reading/index.md'],

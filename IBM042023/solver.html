@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<style>
+  digits {
+    display: flex;
+  }
+  
+  digit {
+    display: flex;
+    flex-direction: column;
+    width: 25px;
+  }
+  
+  button {
+    height: 21px;
+  }
+  spacer {
+    height: 21px;
+  }
+
+  .disable-dbl-tap-zoom {
+    touch-action: manipulation;
+  }
+  
+  row {
+    display: block;
+  }
+  
+/* From: https://css-tricks.com/the-checkbox-hack/ */
+:root {
+  font-family: 'Clear Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 16px;
+  --game-max-width: 500px;
+  --square-size: 18px;
+  --square-and-border-size: calc(var(--square-size) + 2px);
+}
+
+switch {
+  position: relative;
+  display: inline-block;
+}
+.switch-input {
+  display: none;
+}
+.switch-label {
+  display: block;
+  width: var(--square-and-border-size);
+  height: var(--square-and-border-size);
+  text-indent: -150%;
+  clip: rect(0 0 0 0);
+  color: transparent;
+  user-select: none;
+}
+.switch-label::before,
+.switch-label::after {
+  content: "";
+  display: block;
+  position: absolute;
+  cursor: pointer;
+}
+.switch-label::before {
+  width: var(--square-size);
+  height: var(--square-size);
+  background-color: #dedede;
+  border: 2px solid;
+  border-color: var(--border-color);
+  -webkit-transition: background-color 0.25s ease;
+  transition: background-color 0.25s ease;
+}
+.switch-label::after {
+  top: 0;
+  left: 0;
+  width: 0px;
+  height: 0px;
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.45);
+  -webkit-transition: left 0.25s ease;
+  transition: left 0.25s ease;
+}
+.switch-input:checked + .switch-label::before {
+  background-color: #89c12d; /* green */
+}
+.switch-input:checked + .switch-label::after {
+  left: var(--square-and-border-size);
+}
+</style>
+<puzzle>
+  <header>
+    Seed:  <input value="" style="width:20em; text-align:center" id="seed"/>  Length:  <length></length>  Grid Size:  <input value="" style="width:4em; text-align:center" id="size"/>
+  </header>
+  <status>
+    Edit: <input id="edit" type="checkbox">  <button id="reset">Reset</button>  <button id="empty">Empty</button>  <button onclick="logReplay()">Log Dark</button>  <button onclick="logReplay(1)">Log Light</button>  
+  </status>
+  <grid class="disable-dbl-tap-zoom">
+  </grid>
+  <footer>
+    Replay:  <input value="" style="width:20em; text-align:center" id="replay"/>
+  </footer>
+</puzzle>
+<script>
+const puzzle = document.querySelector("puzzle");
+let chal = {
+  steps: 0,
+};
+function setup() {
+  //setSeed("0011110101100001", true);
+  //setSeed("0".repeat(5**2), true);
+  setSeed("0".repeat(11**2), true);
+  //setSeed("000001000000000001110011110100010110101000010011011101110000001101001110000110111000110101101100101101011010010011101010111000100101110100101000110001011100000000000101100000010001100000000010000110010010110110101001011101101011111011100000011000101010111011111100100011110010000100100111000111010010100010001110011001010001001111110101110001000010111000100000000000101100101000101001111001010010010011110110100000110001111111011010110100000011100100110010101000110111001110010000110000000010011100100101111111011011111100010101000000000110101011100000110001111100000011001111", true);
+  //setSeed("110001000000100101110011001000010100001100011101010111100110000110011010011111100010100010111101110110011101110100110001000110001000100011001101100010101111001110110010111101001111001110000101101001101000001101111001110000101011111111110100110000000000110111111001100100111001110100111110001110111011111010100010010100000001101100010111110011001111110100001001010100111011000001100000011010010001010110111100100111001101111111010001011100101100110110101000110110010111111011001001111011000100101111101001100010101001100011010100010000100001111111100111111110010111110010010000010000011001001010010011111010110011011111101100110110011100110001101001100000000110111110100101010000100011011010111100011111000011110001001111111000111111101011111011100100101011000011001110101011000011001101011101000001100101101001010010100000011011100101010001010111101001110100010110010010110000011010111110100110000010", true);
+  
+  const button = puzzle.querySelector(`#reset`);
+  button.addEventListener("click", (event) => {
+    main();
+  });
+  const empty = puzzle.querySelector(`#empty`);
+  empty.addEventListener("click", (event) => {
+    display("0".repeat(chal.n**2));
+  });
+  
+  const input = puzzle.querySelector("#seed");
+  input.onchange = (e) => {
+    let seed = e.target.value;
+    setSeed(seed, true);
+  }
+  
+  const replayInp = puzzle.querySelector("#replay");
+  replayInp.onchange = (e) => {
+    const data = e.target.value;
+    let seed = data.length && JSON.parse(data) || [];
+    replay(seed);
+  }
+  
+  const size = puzzle.querySelector("#size");
+  size.onchange = (e) => {
+    const data = e.target.value;
+    setSeed("0".repeat(parseInt(data)**2), true);
+  }
+}
+function setSeed(seed, show=false) {
+  chal.seed = seed;
+  display(seed);
+  if (show) {
+    const input = puzzle.querySelector("input");
+    input.value = seed;
+    const length = puzzle.querySelector("length");
+    length.innerHTML = seed.length;
+  }
+}
+function main() {
+  chal.steps = 0;
+  display(chal.seed);
+//  display("0".repeat(100));
+//  display("0".repeat(16));
+}
+setup();
+main();
+
+function gridClick(square) {
+  var row = parseInt(square.dataset.row);
+  var col = parseInt(square.dataset.col);
+  
+  chal.replay.push([row, col]);
+  chal.sol.push([col+1, 4-row]);
+  //console.log(chal.replay);
+  
+  const edit = document.querySelector("#edit");
+  if(!edit.checked) {
+    flip(row, col);
+  } else {
+    let c=0;
+    for (var i = 0; i < chal.n; i++) {
+      const inp = checkbox(i, col);
+      c += !inp.checked;
+      const inp2 = checkbox(row, i);
+      c += !inp2.checked;
+    }
+    console.log(c);
+  }
+}
+
+function checkbox(i, j) {
+  return puzzle.querySelector(`#switch-${i}-${j}`);
+}
+const arraySort = (a, b) => {
+  if (a[0] == b[0]) {
+    return b[1] - a[1];
+  }
+  return a[0] - b[0];
+}
+function logReplay(solve=false) {
+  const replay = [];
+  const sol = [];
+  for (var row = 0; row < chal.n; row++) {
+    for (var col = 0; col < chal.n; col++) {
+      if(!checkbox(row, col).checked^solve) {
+        replay.push([row, col]);
+        sol.push([col+1, chal.n-row]);
+      }
+    }
+  }
+  let sortedReplay = replay.sort(arraySort);
+  const replayStr = (`[[${sortedReplay.join("],[")}]]`);
+  console.log(replayStr);
+  let sortedSol= sol.sort(arraySort);
+  console.log(`[(${sol.join("),(")})]`);
+  console.log(sol.length);
+  
+  const replayInp = puzzle.querySelector("#replay");
+  replayInp.value = replayStr;
+}
+function replay(moves) {
+  for (const move of moves) {
+    const [i, j] = move;
+    flip(i, j, true);
+  }
+}
+function flip(i, j, extra = false) {
+  for (var row = 0; row < chal.n; row++) {
+    const inp = checkbox(row, j);
+    inp.checked = !inp.checked; // toggle
+  }
+  for (var col = 0; col < chal.n; col++) {
+    const inp = checkbox(i, col);
+    inp.checked = !inp.checked; // toggle
+  }
+  if (extra) {
+    const inp = checkbox(i, j);
+    inp.checked = !inp.checked; // toggle
+  }
+}
+
+function display(sequence) {
+  const data = sequence.split("").filter(x => x=='0'||x=='1').map(x => parseInt(x));
+  const n = Math.floor(data.length**0.5);
+  const grid = puzzle.querySelector("grid");
+  
+  const items = [];
+  for (let i=0; i<n; i++) {
+    let html = ``;
+    for (let j=0; j<n; j++) {
+      html += `
+<switch>
+<input id="switch-${i}-${j}" class="switch-input" type="checkbox">
+<label for="switch-${i}-${j}" class="switch-label" data-row="${i}" data-col="${j}" onclick="gridClick(this)"></label>
+</switch>`;
+    }
+    items.push(`<row>${html}</row>`);
+  }
+  grid.innerHTML = items.join("\n");
+  chal.n = n;
+  chal.replay = [];
+  chal.sol = [];
+  const size = puzzle.querySelector("#size");
+  size.value = n;
+ 
+  for (var row = 0; row < n; row++) {
+    for (var col = 0; col < n; col++) {
+      checkbox(row, col).checked = data[4*row+col];
+    }
+  }
+}
+</script>
