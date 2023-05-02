@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<!-- <link rel="stylesheet" href="app.css"> -->
+
+<h3 id="sky-station-galaxy-first-galaxy-in-the-game">Sky Station Galaxy - First galaxy in the game</h3>
+<p><img src="./galaxy1.png" alt="Sky Station Galaxy - First galaxy in the game"></p>
+
+<h3 id="freezy-flake-galaxy-a-winter-themed-galaxy">Freezy Flake Galaxy - A winter-themed galaxy</h3>
+<p><img src="./galaxy2.png" alt="Freezy Flake Galaxy - A winter-themed galaxy"></p>
+
+<h3 id="bowser-s-galaxy-generator-the-final-galaxy-in-the-game">Bowser&#39;s Galaxy Generator - The final galaxy in the game</h3>
+<p><img src="./galaxy3.png" alt="Bowser&#39;s Galaxy Generator - The final galaxy in the game"></p>
+
+<canvas id="canvas" width="1280" height="720" style="display: none"></canvas>
+<script src="../p5.min.js"></script>
+<script>
+const width = window.innerWidth;
+
+const sketch1 = false && new p5(sketch => {
+  const fwidth = 1280;
+  const fheight = 720;
+  const height = Math.round(width*fheight/fwidth);
+  let out;
+  let avg;
+  
+  let isMouseHover = false;
+  sketch.preload = function() {
+    avg = sketch.createImage(fwidth, fheight);
+    avg.loadPixels();
+
+    makeAverage(avg);
+  }
+  sketch.setup = function() {
+    const renderer = sketch.createCanvas(width, height);
+    sketch.background("#f2ede9");
+    // sketch.frameRate(5);
+    sketch.frameRate(60);
+    sketch.noSmooth();
+    
+    renderer.elt.addEventListener("mouseleave", function (event) {
+      isMouseHover = false
+    }, false);
+    renderer.elt.addEventListener("mouseover", function (event) {
+      isMouseHover = true
+    }, false);
+
+    out = sketch.createImage(fwidth, fheight);
+    out.loadPixels();
+    
+    // makeFrame(0, out);
+    // out.updatePixels();
+    // sketch.image(out, 0, 0, width, height, 0, 0, fwidth, fheight);
+    
+    avg.updatePixels();
+    sketch.image(avg, 0, 0, width, height, 0, 0, fwidth, fheight);
+  };
+  function getColor(data, x, y) {
+    let index = (x + y * fwidth) * 4;
+    return [data[index], data[index+1], data[index+2]];
+  }
+  // helper for writing color to array
+  function writeColor(image, x, y, red, green, blue, alpha) {
+    let index = (x + y * fwidth) * 4;
+    image.pixels[index] = red;
+    image.pixels[index + 1] = green;
+    image.pixels[index + 2] = blue;
+    image.pixels[index + 3] = alpha;
+  }
+  function writeColorFromData(image, x, y, data) {
+    let index = (x + y * fwidth) * 4;
+    for (let i = 0; i<4; i++) {
+      image.pixels[index+i] = data[index+i];
+    }
+  }
+  sketch.draw = function() {
+    if (isMouseHover) {
+      // const frame = Math.round(Math.max(sketch.mouseX, 0)/10);
+      // makeFrame(frame % dataArray.length, out);
+      // out.updatePixels();
+      // sketch.image(out, 0, 0, width, height, 0, 0, fwidth, fheight);
+    }
+  }
+  function makeFrame(i, a) {
+    let x, y;
+    const data = dataArray[i];;
+    for (y = 0; y < a.height; y++) {
+      for (x = 0; x < a.width; x++) {
+        writeColorFromData(a, x, y, data);
+      }
+    }
+  }
+  function makeAverage(a) {
+    let x, y;
+    for (y = 0; y < a.height; y++) {
+      console.log(`${y}/${a.height}`);
+      for (x = 0; x < a.width; x++) {
+        const cSum = [0, 0, 0];
+        for (let i=0; i<dataArray.length; i++) {
+          const data = dataArray[i];
+          const c = getColor(data, x, y);
+          for (let cx=0; cx<3; cx++) {
+            cSum[cx] += c[cx];
+          }
+        }
+        for (let cx=0; cx<3; cx++) {
+          cSum[cx] /= dataArray.length;
+        }
+        writeColor(a, x, y, cSum[0], cSum[1], cSum[2], 255);
+      }
+    }
+    console.log(a.pixels);
+  }
+})
+
+const directoryListing = [
+//  ['C:\\Users\\Richard\\VirtualBox VMs\\STUDENT\\SHARED\\galaxy1', 240],
+//  ['C:\\Users\\Richard\\VirtualBox VMs\\STUDENT\\SHARED\\galaxy2', 196],
+//  ['C:\\Users\\Richard\\VirtualBox VMs\\STUDENT\\SHARED\\galaxy3', 190]
+];
+const pngArray = [];
+directoryListing.map((rootStruct) => {
+  const [root, num] = rootStruct;
+  for (let i=1; i<=num; i++) {  
+    const img = new Image(); // Create new img element
+    img.src = `${root}\\out${i}.png`; // Set source path
+    pngArray.push(img);
+  }
+});
+  
+const dataArray = pngArray.map(image => {
+  const canvas = document.getElementById("canvas");
+  const context = canvas.getContext("2d");
+  canvas.style = "width: 100%; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges;";
+  
+  context.drawImage(image, 0, 0, image.naturalWidth, image.naturalHeight);
+
+  const imageData = context.getImageData(
+    0,
+    0,
+    image.naturalWidth,
+    image.naturalHeight
+  );
+
+  const data = imageData.data;
+  return data;
+});
+</script>
