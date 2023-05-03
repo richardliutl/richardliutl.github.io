@@ -10,4 +10,4 @@
 
 [Week 6: Claire Hentschker](./hentschker.html)
 
-[Week 12: Raven Kwok](./kwok.html)
+[Week 12: Raven Kwok](./kwok variations/v2.html) [simple variation](./kwok.html) [buggy variation])(./kwok variations/v1.html)

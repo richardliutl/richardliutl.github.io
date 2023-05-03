@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<link rel="stylesheet" href="../app.css">
+<script src="../../p5.min.js"></script>
+<script>
+const width = window.innerWidth;
+const end = x => (x[x.length-1]);
+
+const sketch1 = new p5(sketch => {
+  const height = 400;
+  const size = 400;
+  const root = {
+    level: 0,
+    size: size/2,
+    s: [0],
+    children: [],
+    time: 0,
+    mult: 1,
+    seq: [],
+  };
+  let targetQuad = root;
+  let time = 0;
+  let cycle = 1;
+  let cycle2 = 1;
+  let mouseX = 0;
+  let mouseY = height;
+  let isMouseHover = false;
+  let willSplit = [];
+  sketch.setup = function() {
+    const renderer = sketch.createCanvas(height, height);
+    sketch.fill("#000");
+    sketch.noStroke();
+    
+    renderer.elt.addEventListener("mouseleave", function (event) {
+      isMouseHover = false
+    }, false);
+    renderer.elt.addEventListener("mouseover", function (event) {
+      isMouseHover = true
+    }, false);
+  };
+  const path = t => {
+    const s = t%4;
+    if (s < 1) return s;
+    if (s < 2) return 1;
+    if (s < 3) return 1 - (s%1);
+    return 0;
+  };
+  const wheel = (t, size, alt=0) => {
+    const s = t%4;
+    if (s < 1) return [[size, 0], sketch.map(-(s), 0, 1, sketch.PI, sketch.PI*1.5) - alt*sketch.PI*0.5];
+    if (s < 2) return [[size*2, size], sketch.map(-(s-1), 0, 1, sketch.PI, sketch.PI*1.5) + alt*sketch.PI*0.5];
+    if (s < 3) return [[size, size*2], sketch.map(-(s), 0, 1, sketch.PI, sketch.PI*1.5) - alt*sketch.PI*0.5];
+    return [[0, size], sketch.map(-(s-1), 0, 1, sketch.PI, sketch.PI*1.5) + alt*sketch.PI*0.5];
+  };
+  const leaf = (t, size) => {
+    const s = t%4;
+    if (s < 1) return [[size, 0], sketch.map(-s, 0, 1, sketch.PI*3/4, sketch.PI*5/4)];
+    if (s < 2) return [[size, 0], sketch.PI*1/4];
+    if (s < 3) return [[size, size*2], sketch.map(-(s), 0, 1, sketch.PI*3/4, sketch.PI*5/4)];
+    return [[size, size*2], sketch.PI*5/4];
+  };
+  const leaf2 = (t, size) => {
+    const s = t%4;
+    if (s < 1) return [[0, size], -sketch.PI*1/4];
+    if (s < 2) return [[size*2, size], sketch.map(-(s), 0, 1, sketch.PI*3/4, sketch.PI*5/4)+sketch.PI];
+    if (s < 3) return [[size*2, size], -sketch.PI*5/4];
+    return [[0, size], sketch.map(-s, 0, 1, sketch.PI*3/4, sketch.PI*5/4)+sketch.PI];
+  };
+  const sillySquare = (x, y, t_o, size) => {
+    const steady = 10**sketch.map(mouseY, 0, height, 0, 2);
+    const t = t_o + sketch.sin((2*t_o+1)*sketch.PI)/steady;
+    
+    sketch.beginShape();
+    let [pos, th] = wheel(t, size);
+    sketch.vertex(x+pos[0]+size*sketch.cos(th), y+pos[1]+size*sketch.sin(th));
+    
+    [pos, th] = leaf(t, size);
+    sketch.vertex(x+pos[0]+size*(2**0.5)*sketch.cos(th), y+pos[1]+size*(2**0.5)*sketch.sin(th));
+    
+    [pos, th] = wheel(t, size, 1);
+    sketch.vertex(x+pos[0]+size*sketch.cos(th), y+pos[1]+size*sketch.sin(th));
+    
+    [pos, th] = leaf2(t, size);
+    sketch.vertex(x+pos[0]+size*(2**0.5)*sketch.cos(th), y+pos[1]+size*(2**0.5)*sketch.sin(th));
+    sketch.endShape(sketch.CLOSE);
+  }
+  const dfs = (root, fn) => {
+    const stack = [root];
+    while (stack.length > 0) {
+      const quad = stack.pop();
+      fn(quad);
+      quad.children.forEach(q => 
+        stack.push(q));
+    }
+  };
+  const split = (root, born, seq) => {
+    const rs = born;
+    root.children = [
+      {s: [0,rs], cmd: [], fill:"#600"},
+      {s: [0,(rs+1)%4], cmd: [[1, 0]], fill:"#060"},
+      {s: [0,(rs+2)%4], cmd: [[2, 0]], fill:"#006"},
+      {s: [0,(rs+3)%4], cmd: [[2, 1]], fill:"#666"},
+    ]
+    root.children.forEach(q => {
+      q.level = root.level+1;
+      q.size = root.size/2;
+      q.children = [];
+      q.born = born;
+      q.mult = 9/8*root.mult;
+      q.time = root.time;
+      q.cmdix = 0;
+      q.seq = [...root.seq, seq];
+    });
+  }
+  const offset = sketch.random([0,1,2,3]);
+  sketch.draw = function() {
+    if (isMouseHover) {
+      mouseX = sketch.mouseX;
+      mouseY = sketch.mouseY;
+    }
+    const speed = sketch.map(mouseX, 0, width, 1, 100);
+    
+    //sketch.background("#eee");
+    sketch.background("#fff");
+    
+    dfs(root, (q) => {
+      if (q.children.length == 0) {
+        let x = path(q.time+q.s[0]);
+        let y = path(q.time+q.s[0]+3);
+        for (let i=1; i<q.s.length; i++) {
+          const s = q.s[i];
+          x += path(s);
+          y += path(s+3);
+        };
+        const s = q.size;
+        let pos = [x*s, y*s];
+        
+//        sketch.fill(q.fill || 0);
+        sketch.fill(0);
+        if (q.seq && q.seq.length) {
+          for (let i=q.cmdix; i<q.seq.length; i++) {
+            let [offset, mult] = q.seq[i];
+            pos[0] += path(offset)*s*mult;
+            pos[1] += path(offset+3)*s*mult;
+          }
+        }
+        
+//        sketch.square(pos[0], pos[1], s);
+        const x_0 = pos[0] - s*path(q.time+q.s[0]);
+        const y_0 = pos[1] - s*path(q.time+q.s[0]+3);
+        sillySquare(x_0, y_0, q.time+q.s[0], s);
+
+      }
+    });
+    
+    dfs(root, q => {
+      q.time += 0.0006*speed*q.mult;
+      const i = q.cmdix;
+      if (q.cmd && i < q.cmd.length && q.time - q.born > q.cmd[i][0]) {
+        const cmd = q.cmd[i];
+        //q.seq.pop();
+        q.s.push(q.born + cmd[0] + cmd[1]);
+        q.s[0] = 4 + cmd[1] - cmd[0];
+        q.cmdix++;
+        q.mult = q.mult*sketch.random([1/2, 3/5, 2/3, 3/4, 4/5, 5/6, 1]);
+      }
+    });
+    const born = 4*cycle+offset;
+    if (targetQuad.time > born) {
+      cycle++;
+      if (cycle >= 2 && cycle < 3) {
+        console.log("split");
+        split(targetQuad, born, [born, 2**(targetQuad.level)]);
+        willSplit.push(targetQuad.children[2]);
+        targetQuad = targetQuad.children[0];
+      }
+      if (cycle >= 3 && cycle < 10) {
+        console.log("split 3");
+        split(targetQuad, born, [born, 2**(targetQuad.level+1)]);
+        targetQuad = targetQuad.children[0];
+      }
+      // Cycle 1: Single square
+      // Cycle 2: Branching level = 1
+    }
+    const born2 = 4*cycle2+2;
+    if (targetQuad.time > born) {
+      cycle2++;
+      if (cycle2 > 3) {
+        q = willSplit.pop();
+        //split(q, born, [born, 2**(q.level+1)]);
+        //willSplit.push(q.children[2]);
+      }
+    }
+  }
+})
+</script>
