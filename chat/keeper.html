@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Keeper</title>
+    <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.3.1/jspdf.umd.min.js"></script>
+    <style>
+        #pdf-container {
+            width: 100%;
+            height: 90vh;
+            overflow: auto;
+            margin: auto;
+        }
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+            margin: auto;
+            border: 1px solid black;
+        }
+        .selected {
+            border: 3px solid red;
+        }
+        #controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="pdf-upload" accept=".pdf">
+    <span>Zoom: </span><input type="range" id="scale-slider" min="0.1" max="2" step="0.1" value="1">
+    <div id="pdf-container"></div>
+    <div id="controls">
+        <button id="save-button">Save PDF</button>
+    </div>
+    <script>
+let pdfDoc = null;
+let selectedPages = [];
+let scale = 1;
+
+document.getElementById('pdf-upload').addEventListener('change', function(e) {
+    let file = e.target.files[0];
+    if (file.type !== 'application/pdf') {
+        alert('Please select a PDF file.');
+        return;
+    }
+
+    let fileReader = new FileReader();
+    fileReader.onload = function(e) {
+        let typedArray = new Uint8Array(this.result);
+
+        pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+            pdfDoc = pdf;
+            selectedPages = Array(pdf.numPages).fill(false);
+            renderAllPages();
+        });
+    };
+    fileReader.readAsArrayBuffer(file);
+});
+
+document.getElementById('scale-slider').addEventListener('input', function(e) {
+    scale = e.target.value;
+    renderAllPages();
+});
+
+document.getElementById('save-button').addEventListener('click', function() {
+    onSavePdf().catch(console.error);
+});
+
+function renderAllPages() {
+    let container = document.getElementById('pdf-container');
+    container.innerHTML = '';
+
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+        let canvas = document.createElement('canvas');
+        container.appendChild(canvas);
+
+        canvas.addEventListener('click', function() {
+            selectedPages[i-1] = !selectedPages[i-1];
+            canvas.classList.toggle('selected');
+        });
+
+        renderPage(i, canvas.getContext('2d'));
+    }
+}
+
+function renderPage(num, ctx) {
+    pdfDoc.getPage(num).then(function(page) {
+        let viewport = page.getViewport({scale: scale});
+        ctx.canvas.height = viewport.height;
+        ctx.canvas.width = viewport.width;
+
+        let renderContext = {
+            canvasContext: ctx,
+            viewport: viewport
+        };
+
+        page.render(renderContext);
+    });
+}
+const jsPDF = jspdf;
+async function onSavePdf() {
+    let newPdf = new jsPDF.jsPDF();
+    const pageWidth = newPdf.internal.pageSize.getWidth();
+    const pageHeight = newPdf.internal.pageSize.getHeight();
+
+    for (let i = 0; i < selectedPages.length; i++) {
+        if (!selectedPages[i]) {
+            continue;
+        }
+
+        let page = await pdfDoc.getPage(i + 1);
+
+        let viewport = page.getViewport({scale: 2});
+        let canvas = document.createElement('canvas');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        let renderContext = {
+            canvasContext: canvas.getContext('2d'),
+            viewport: viewport
+        };
+
+        // Wait for the page to finish rendering before moving on to the next page
+        await page.render(renderContext).promise;
+
+        // Add the image with JPEG compression
+        newPdf.addImage(canvas.toDataURL('image/jpeg', 0.8), 'JPEG', 0, 0, pageWidth, pageHeight, i, 'FAST');
+
+        if (i < selectedPages.length - 1) {
+            newPdf.addPage();
+        }
+    }
+
+    newPdf.save('newPdf.pdf');
+}
+
+</script>
+</body>
+</html>
