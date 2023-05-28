@@ -5,6 +5,7 @@ const currentContentMap = {
 "#index": `
 # Richard Liu
 
+## Tourney
 ## IBM 2023 April Puzzle
 ## Recreating the Past (MAS.S62)
 ## Y2023 Puzzle
@@ -23,6 +24,7 @@ const currentContentMap = {
 
 const contentMap = {...currentContentMap};
 const directoryListing = [
+  ['#tourney', './tourney/index.md'],
   ['#ibm-2023-april-puzzle', './IBM042023/index.md'],
   ['#recreating-the-past-mas-s62-', './RTP/index.md'],
   ['#y2023-puzzle', './Y2023/index.md'],

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<style>
+  digits {
+    display: flex;
+  }
+  
+  digit {
+    display: flex;
+    flex-direction: column;
+    width: 25px;
+  }
+  
+  button {
+    height: 21px;
+  }
+  spacer {
+    height: 21px;
+  }
+
+  .disable-dbl-tap-zoom {
+    touch-action: manipulation;
+  }
+  
+  row {
+    display: block;
+  }
+
+  tie {
+    display: block;
+    border: solid 1px black;
+    width: fit-content;
+  }
+  
+  player {
+    width: 80px;
+    display: inline-flex;
+    overflow-y: hidden;
+  }
+  player.light {
+    background: yellow;
+  }
+</style>
+<app>
+  <header>
+    New Match:  <input value="" style="width:10em; text-align:center" id="victory"/>  beats  <input value="" style="width:10em; text-align:center" id="defeat"/>  <button id="add">Add</button>
+  </header>
+  <hint>
+  </hint>
+  <status>
+    Edit: <input id="edit" type="checkbox">  <button id="clearHints">Clear Hints</button>  <button id="reset">Reset</button>
+  </status>
+  <h3>Rankings</h3>
+  <ranking>
+  </ranking>
+  <h3>Match History</h3>
+  <history>
+  </history>
+</app>
+<script>
+// '{"matches":[[0,1],[1,2]],"players":["alice","bob","charlie","dale","eve"],"newMatch":[-1,-1],"elo":[2.78125,0.1875,0.03125,1,1]}'
+// '{"matches":[],"players":[],"newMatch":[-1,-1],"elo":[]}'
+// '{"matches":[[0,1],[0,2],[0,3],[0,4],[0,5],[5,1],[5,6],[5,7],[2,8],[2,6],[2,3],[8,7],[8,4],[1,9],[4,9],[3,9]],"players":["Daniel","Kenneth","William","Johan","Jackson","TJ","Joaquin","Tommy","Andrew","Ian"],"newMatch":[-1,-1],"elo":[9.889892578125,0.004231770833333333,0.068115234375,0.004231770833333333,0.004231770833333333,0.016845703125,0.0009765625,0.0009765625,0.009521484375,0.0009765625]}'
+const app = document.querySelector("app");
+let tourney = {
+  matches: [],
+  players: [],
+  newMatch: [-1, -1],
+  elo: [],
+};
+function setup() {
+  const inputV = app.querySelector("#victory");
+  inputV.oninput = (e) => {
+    let val = e.target.value;
+    hint(val, "#victory");
+  }
+  inputV.onfocus = (e) => {
+    let val = e.target.value;
+    hint(val, "#victory");
+  }
+  const inputD = app.querySelector("#defeat");
+  inputD.oninput = (e) => {
+    let val = e.target.value;
+    hint(val, "#defeat");
+  }
+  inputD.onfocus = (e) => {
+    let val = e.target.value;
+    hint(val, "#defeat");
+  }
+  
+  const add = app.querySelector(`#add`);
+  add.addEventListener("click", (event) => {
+    let p0 = -1;
+    let p1 = -1;
+    const standardNames = tourney.players.map(x => x.toLowerCase());
+    if (p0 == -1 && inputV.value.length > 0) {
+      const name = inputV.value;
+      p0 = standardNames.indexOf(name.toLowerCase());
+      if (p0 == -1) {
+        p0 = tourney.players.length;
+        tourney.players.push(name);
+      }
+    }
+    if (p1 == -1 && inputD.value.length > 0) {
+      const name = inputD.value;
+      p1 = standardNames.indexOf(name.toLowerCase());
+      if (p1 == -1) {
+        p1 = tourney.players.length;
+        tourney.players.push(name);
+      }
+    }
+    if (p0 >= 0 && p1 >= 0)
+      addMatch(p0, p1);
+  });
+  const clear = app.querySelector(`#clearHints`);
+  clear.addEventListener("click", (event) => {
+    clearHints();
+  });
+  const button = app.querySelector(`#reset`);
+  button.addEventListener("click", (event) => {
+    //main();
+  });
+}
+function clearHints() {
+  const inputV = app.querySelector("#victory");
+  const inputD = app.querySelector("#defeat");
+  inputV.value = "";
+  inputD.value = "";
+  hint(0, 0, true);
+  highlight(-1);
+}
+function addMatch(victory, defeat, show=true) {
+  tourney.matches.push([victory, defeat]);
+  if (show) {
+    display();
+  }
+  displayHistory();
+}
+function main() {
+  //tourney = JSON.parse('{"matches":[],"players":["Daniel","Kenneth","William","Johan A.","Jackson","TJ","Joaquin","Tommy","Andrew","Ian"],"newMatch":[-1,-1],"elo":[9.889892578125,0.004231770833333333,0.068115234375,0.004231770833333333,0.004231770833333333,0.016845703125,0.0009765625,0.0009765625,0.009521484375,0.0009765625]}');
+  //tourney = JSON.parse('{"matches":[[2,3],[0,1],[5,4],[6,7],[8,9],[0,2],[5,6],[8,9],[0,8],[0,5],[5,8],[8,2],[2,6],[6,9],[4,7]],"players":["Daniel","Kenneth","William","Johan A.","Jackson","TJ","Joaquin","Tommy","Andrew","Ian"],"newMatch":[4,7],"elo":[9.795288085937502,0.0009765625,0.03393554687499999,0.0009765625,0.005859375,0.11328125,0.009114583333333332,0.0009765625,0.038614908854166664,0.0009765625]}');
+  display();
+  displayHistory();
+}
+setup();
+main();
+
+function calculate() {
+  const n = tourney.players.length;
+  const x = new Array(n);
+  for (var i = 0; i < n; i++) {
+    x[i] = new Array(n).fill(0);
+  }
+  // x[a][b] = # times a beats b
+  // x[a][b] = x[b][a] = 0 --> a, b may be in different groups/unranked
+  // x[a][b] = x[b][a] > 0 --> a, b are in the same group, potentially tied
+  tourney.matches.forEach(match => {
+    x[match[0]][match[1]]++;
+  });
+  
+  // create groups
+  const group = new Array(n).fill(-1); // group[player] = groupId
+  const groupArr = new Array(n); // group[groupId] = list of players
+  let groupId = 0;
+  groupArr[groupId] = [];
+  for (var i = 0; i < n; i++) {
+    if (group[i] >= 0) continue;
+    let stack = [i];
+    while (stack.length > 0) {
+      const p = stack.pop();
+      if (group[p] >= 0) continue;
+      group[p] = groupId;
+      groupArr[groupId].push(p);
+      for (var j=0; j<n; j++) { 
+        if (group[j] == -1 && (x[p][j] > 0 || x[j][p] > 0)) {
+          stack.push(j);
+        }
+      }
+    }
+    groupId++;
+    groupArr[groupId] = [];
+  }
+  console.log(x);
+  
+  // calculate elo
+  const elo = new Array(n).fill(1);
+  for (var iter = 0; iter < n; iter++) {
+  for (var i = 0; i < n; i++) {
+    let total = 0;
+    for (var j=0; j<n; j++) {
+      if (j != i && (x[i][j] > 0 || x[j][i] > 0)) {
+        const flow = x[j][i] - x[i][j];
+        if (flow > 0)
+          total += flow;
+      }
+    }
+    if (total == 0 || elo[i] <= 0) continue;
+    for (var j=0; j<n; j++) {
+      if (j != i && (x[i][j] > 0 || x[j][i] > 0)) {
+        const flow = x[j][i] - x[i][j];
+        if (flow > 0)
+        elo[j] += flow/total*0.5*elo[i];
+      }
+    }
+    elo[i] *= 0.5;
+  }
+  }
+  tourney.elo = elo;
+  
+  let sortedGroups = groupArr.filter(x => x.length > 0)
+    .map(g => {
+      g.sort((a, b) => {
+        return elo[b] - elo[a];
+      });
+      return g;
+    }).sort((a, b) => {
+      return b.length - a.length;
+    });
+  sortedGroups = sortedGroups.map(g => {
+    const ties = [];
+    let tie = [g[0]];
+    for (let i=1; i<g.length; i++) {
+      const p0 = g[i-1];
+      const p1 = g[i];
+      const flow = x[p0][p1] - x[p1][p0];
+      if (flow == 0) {
+        tie.push(p1);
+      } else {
+        ties.push(tie);
+        tie = [p1];
+      }
+    }
+    ties.push(tie);
+    return ties;
+  });
+  return sortedGroups;
+}
+
+function hintClick(square) {
+  var ix = parseInt(square.dataset.ix);
+  var sel = square.dataset.selector;
+  const input = app.querySelector(sel);
+  
+  input.value = tourney.players[ix];
+  const selIx = ["#victory", "#defeat"].indexOf(sel);
+  tourney.newMatch[selIx] = ix;
+  hint(0, 0, true);
+}
+function light(player) {
+  var id = parseInt(player.dataset.id);
+  highlight(id);
+}
+function highlight(id) {
+  let p = app.querySelectorAll("player");
+  p.forEach(x => x.className = "");
+  p = app.querySelectorAll(`player[data-id='${id}']`);
+  p.forEach(x => x.className = "light");
+}
+
+function hint(input, sel, clear=false) {
+  const hint = app.querySelector("hint");
+  hint.innerHTML = "";
+  if (clear) {
+    return;
+  }
+  
+  const players = tourney.players.map((x, i) => [x, i]).filter(x => x[0].toLowerCase().indexOf(input.toLowerCase()) >= 0);
+  let html = ``;
+  players.forEach(x => {
+    const name = x[0];
+    const ix = x[1];
+    html += `
+<button data-ix=${ix} data-selector=${sel} onclick="hintClick(this)">${name}</button><br>`;
+  });
+  hint.innerHTML = `<p>${html}</p>`;
+}
+
+function display() {
+  const data = calculate();
+
+  const ranking = app.querySelector("ranking");
+  const unranked = [];
+  let html = ``;
+  data.forEach((group, ix) => {
+    if (group.length == 1) {
+      unranked.push(group[0][0]);
+      return;
+    }
+    let info = ``;
+    group.forEach(ties => {
+      if (ties.length > 1) {
+      tie = ``;
+      ties.forEach(p => {        
+        const p0 = tourney.players[p];
+        tie += `
+<li><player data-id=${p} onclick="light(this)" onmouseover="light(this)">${p0}</player> (${tourney.elo[p].toFixed(6)})</li>
+`});
+      info += `
+<tie>
+${tie}
+</tie>
+`;
+      } else {
+      const p = ties[0];
+      const p0 = tourney.players[p];
+      info += `
+<li><player data-id=${p} onclick="light(this)" onmouseover="light(this)">${p0}</player> (${tourney.elo[p].toFixed(6)})</li>
+`;
+      }
+    });
+    html += `
+<h4>Group ${String.fromCharCode(65+ix)}</h4>
+<ol>
+${info}
+</ol>`;
+  });
+  
+  let info = ``;
+  unranked.forEach(p => {
+    const p0 = tourney.players[p];
+    info += `<li>${p0}</li>`;
+  });
+  html += `
+<h4>Unranked</h4>
+<ul>
+${info}
+</ul>`;
+  ranking.innerHTML = html;
+}
+
+function displayHistory() {
+  const history = app.querySelector("history");
+  history.innerHTML = "";
+  
+  const n = tourney.matches.length;
+  if (n > 0) {
+    let html = ``;
+    for (let i=n-1; i>=0; i--) {
+      match = tourney.matches[i];
+      const p0 = tourney.players[match[0]];
+      const p1 = tourney.players[match[1]];
+      const info = `<player data-id=${match[0]} onclick="light(this)" onmouseover="light(this)">${p0}</player> beats <player data-id=${match[1]}>${p1}</player>`;
+      html += `
+<li>${info}</li>`;
+    };
+    history.innerHTML = `
+<ol>
+  ${html}
+</ol>`;
+  }
+}
+  
+</script>
