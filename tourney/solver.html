@@ -57,9 +57,6 @@
   </history>
 </app>
 <script>
-// '{"matches":[[0,1],[1,2]],"players":["alice","bob","charlie","dale","eve"],"newMatch":[-1,-1],"elo":[2.78125,0.1875,0.03125,1,1]}'
-// '{"matches":[],"players":[],"newMatch":[-1,-1],"elo":[]}'
-// '{"matches":[[0,1],[0,2],[0,3],[0,4],[0,5],[5,1],[5,6],[5,7],[2,8],[2,6],[2,3],[8,7],[8,4],[1,9],[4,9],[3,9]],"players":["Daniel","Kenneth","William","Johan","Jackson","TJ","Joaquin","Tommy","Andrew","Ian"],"newMatch":[-1,-1],"elo":[9.889892578125,0.004231770833333333,0.068115234375,0.004231770833333333,0.004231770833333333,0.016845703125,0.0009765625,0.0009765625,0.009521484375,0.0009765625]}'
 const app = document.querySelector("app");
 let tourney = {
   matches: [],
@@ -136,8 +133,6 @@ function addMatch(victory, defeat, show=true) {
   displayHistory();
 }
 function main() {
-  //tourney = JSON.parse('{"matches":[],"players":["Daniel","Kenneth","William","Johan A.","Jackson","TJ","Joaquin","Tommy","Andrew","Ian"],"newMatch":[-1,-1],"elo":[9.889892578125,0.004231770833333333,0.068115234375,0.004231770833333333,0.004231770833333333,0.016845703125,0.0009765625,0.0009765625,0.009521484375,0.0009765625]}');
-  //tourney = JSON.parse('{"matches":[[2,3],[0,1],[5,4],[6,7],[8,9],[0,2],[5,6],[8,9],[0,8],[0,5],[5,8],[8,2],[2,6],[6,9],[4,7]],"players":["Daniel","Kenneth","William","Johan A.","Jackson","TJ","Joaquin","Tommy","Andrew","Ian"],"newMatch":[4,7],"elo":[9.795288085937502,0.0009765625,0.03393554687499999,0.0009765625,0.005859375,0.11328125,0.009114583333333332,0.0009765625,0.038614908854166664,0.0009765625]}');
   display();
   displayHistory();
 }
