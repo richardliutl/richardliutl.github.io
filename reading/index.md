@@ -9,3 +9,5 @@
 1. https://www.ekzhang.com/projects
 1. http://whodunit.ai/
 1. https://reionization.wordpress.com/ ([substack](https://substack.com/profile/135472686-laura-cui))
+1. https://marginalrevolution.com
+1. https://okayfail.com/archive.html
